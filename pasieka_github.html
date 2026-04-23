@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f1a0a">
+<title>Pasieka – Dziennik</title>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1a0a;--bg2:#162010;--honey:#e8a020;--honey-bright:#f5bc40;--green:#5ab84a;--orange:#e07230;--red:#c94040;--blue:#5090d0;--text:#e8f0e0;--text-dim:#7a9070;--text-dimmer:#4a6040;--border:rgba(90,184,74,0.15);--border-honey:rgba(232,160,32,0.25);--card:rgba(22,32,16,0.8)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Space Mono',monospace;background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 20% 10%,rgba(90,184,74,.06) 0%,transparent 60%),radial-gradient(ellipse 40% 60% at 80% 80%,rgba(232,160,32,.05) 0%,transparent 60%);pointer-events:none;z-index:0}
+#app{position:relative;z-index:1;max-width:480px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
+header{padding:16px 18px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Libre Baskerville',serif;font-size:20px;color:var(--honey)}
+.logo-sub{font-size:10px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase}
+.season-badge{font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:20px;background:rgba(90,184,74,.12);color:var(--green);border:1px solid rgba(90,184,74,.25)}
+.tabs{display:flex;border-bottom:1px solid var(--border);background:rgba(0,0,0,.15);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:11px 14px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .2s,border-color .2s}
+.tab.active{color:var(--honey);border-bottom-color:var(--honey)}
+.view{display:none;flex:1;flex-direction:column;padding:16px;gap:14px;overflow-y:auto}
+.view.active{display:flex}
+.session-bar{display:flex;gap:10px;background:rgba(0,0,0,.25);border:1px solid var(--border-honey);border-radius:14px;padding:12px 14px}
+.session-block{display:flex;flex-direction:column;gap:6px;flex:1}
+.session-label{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-dimmer)}
+.session-date-input{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Space Mono',monospace;font-size:11px;padding:6px 8px;outline:none;color-scheme:dark}
+.session-date-input:focus{border-color:var(--honey)}
+.session-today-btn{background:rgba(232,160,32,.12);border:1px solid var(--border-honey);color:var(--honey);font-family:'Space Mono',monospace;font-size:10px;border-radius:8px;padding:6px 8px;cursor:pointer;white-space:nowrap;margin-top:2px}
+.weather-display{background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--text-dim);cursor:pointer;transition:border-color .2s;margin-top:2px}
+.weather-display.set{color:var(--green);border-color:rgba(90,184,74,.3)}
+.modal-overlay{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.75);align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border-honey);border-radius:20px 20px 0 0;padding:20px 18px 32px;width:100%;max-width:480px;display:flex;flex-direction:column;gap:10px}
+.modal-title{font-family:'Libre Baskerville',serif;font-size:16px;color:var(--honey)}
+.modal-hint{font-size:12px;color:var(--text-dim);font-style:italic;line-height:1.5}
+.voice-card{background:var(--card);border:1px solid var(--border-honey);border-radius:16px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.mic-wrap{position:relative}
+.mic-ring{position:absolute;inset:-8px;border-radius:50%;border:2px solid rgba(232,160,32,.2)}
+.mic-ring.active{animation:ringpulse 1.4s infinite}
+@keyframes ringpulse{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.4);opacity:0}}
+.mic-btn{width:80px;height:80px;border-radius:50%;border:none;background:linear-gradient(145deg,var(--honey-bright),var(--honey));color:var(--bg);font-size:28px;cursor:pointer;box-shadow:0 0 32px rgba(232,160,32,.25);transition:transform .1s;display:flex;align-items:center;justify-content:center;position:relative;z-index:1}
+.mic-btn:active{transform:scale(.93)}
+.mic-btn.listening{background:linear-gradient(145deg,#e06050,var(--red));box-shadow:0 0 40px rgba(201,64,64,.4);animation:micpulse 1s infinite alternate}
+@keyframes micpulse{from{box-shadow:0 0 24px rgba(201,64,64,.3)}to{box-shadow:0 0 48px rgba(201,64,64,.6)}}
+.mic-hint{font-size:11px;color:var(--text-dim);letter-spacing:.05em;text-align:center}
+.transcript-box{width:100%;min-height:52px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:10px;padding:11px 13px;font-size:13px;line-height:1.55;color:var(--text);font-family:'Libre Baskerville',serif;font-style:italic;display:none}
+.transcript-box.show{display:block}
+.parsed-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;flex-direction:column;gap:8px;display:none}
+.parsed-card.show{display:flex}
+.section-head{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-dimmer);margin:4px 0 2px}
+.pill-row{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(90,184,74,.1);border:1px solid rgba(90,184,74,.25);color:var(--green)}
+.pill.removed{background:rgba(224,114,48,.1);border-color:rgba(224,114,48,.3);color:var(--orange)}
+.pill.event{background:rgba(80,144,208,.1);border-color:rgba(80,144,208,.3);color:var(--blue)}
+.pill.danger{background:rgba(201,64,64,.1);border-color:rgba(201,64,64,.3);color:var(--red)}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.field-box{background:rgba(0,0,0,.2);border-radius:8px;padding:8px 10px}
+.field-label{font-size:9px;color:var(--text-dimmer);letter-spacing:.07em;text-transform:uppercase;margin-bottom:2px}
+.field-val{font-size:13px;color:var(--honey)}
+.field-val.green{color:var(--green)}
+.field-val.red{color:var(--red)}
+.alert-box{background:rgba(201,64,64,.08);border:1px solid rgba(201,64,64,.35);border-radius:10px;padding:10px 13px;font-size:12px;color:#e07070;display:flex;gap:8px;align-items:flex-start;line-height:1.4}
+.btn-row{display:flex;gap:8px}
+.btn{flex:1;padding:12px 8px;border-radius:10px;border:none;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--honey);color:var(--bg);font-weight:700}
+.btn-primary:active{background:var(--honey-bright)}
+.btn-ghost{background:rgba(232,160,32,.08);color:var(--honey);border:1px solid var(--border-honey)}
+.btn:disabled{opacity:.35;pointer-events:none}
+.status-msg{font-size:11px;text-align:center;padding:7px 12px;border-radius:8px}
+.s-ok{background:rgba(90,184,74,.1);color:var(--green)}
+.s-err{background:rgba(201,64,64,.1);color:var(--red)}
+.spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--honey);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.dash-legend{display:flex;gap:12px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-dim)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot-green{background:var(--green)}.dot-orange{background:var(--orange)}.dot-red{background:var(--red)}.dot-gray{background:var(--text-dimmer)}
+.hive-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.hive-cell{aspect-ratio:1;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;border:1px solid transparent;transition:transform .15s}
+.hive-cell:active{transform:scale(.92)}
+.hive-num{font-size:12px;font-weight:700}
+.hive-icon{font-size:9px}
+.hive-ok{background:rgba(90,184,74,.12);border-color:rgba(90,184,74,.25)}
+.hive-ok .hive-num{color:var(--green)}
+.hive-warn{background:rgba(224,114,48,.12);border-color:rgba(224,114,48,.3)}
+.hive-warn .hive-num{color:var(--orange)}
+.hive-crit{background:rgba(201,64,64,.12);border-color:rgba(201,64,64,.3)}
+.hive-crit .hive-num{color:var(--red)}
+.hive-empty{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.07)}
+.hive-empty .hive-num{color:var(--text-dimmer)}
+.hive-detail{background:var(--bg2);border:1px solid var(--border-honey);border-radius:14px;padding:14px;display:none;flex-direction:column;gap:8px}
+.hive-detail.show{display:flex}
+.hive-detail-header{display:flex;justify-content:space-between;align-items:center}
+.hive-detail-title{font-family:'Libre Baskerville',serif;font-size:17px;color:var(--honey)}
+.close-btn{background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;padding:2px 6px}
+.filter-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.filter-row::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;padding:5px 12px;border-radius:20px;font-size:11px;border:1px solid var(--border);cursor:pointer;color:var(--text-dim);background:transparent;font-family:'Space Mono',monospace;transition:all .15s;white-space:nowrap}
+.chip.active{background:var(--honey);color:var(--bg);border-color:var(--honey);font-weight:700}
+.history-list{display:flex;flex-direction:column;gap:8px}
+.h-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.h-item.has-event{border-left:3px solid var(--blue)}
+.h-item.has-alert{border-left:3px solid var(--red)}
+.h-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.h-hive{font-size:12px;color:var(--honey);font-weight:700}
+.h-date{font-size:10px;color:var(--text-dimmer)}
+.h-strength{font-size:18px;letter-spacing:-2px;color:var(--green);line-height:1}
+.h-pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.h-pill{font-size:10px;padding:2px 8px;border-radius:10px}
+.h-pill-green{background:rgba(90,184,74,.1);color:var(--green)}
+.h-pill-orange{background:rgba(224,114,48,.1);color:var(--orange)}
+.h-pill-blue{background:rgba(80,144,208,.1);color:var(--blue)}
+.h-pill-red{background:rgba(201,64,64,.1);color:var(--red)}
+.h-notes{font-size:12px;color:var(--text-dim);margin-top:5px;line-height:1.4;font-style:italic;font-family:'Libre Baskerville',serif}
+.h-alert{font-size:11px;color:var(--red);margin-top:4px}
+.h-weather{font-size:10px;color:var(--text-dimmer);margin-top:3px}
+.separator{display:flex;align-items:center;gap:10px;font-size:10px;color:var(--blue);letter-spacing:.06em;text-transform:uppercase;padding:4px 0}
+.separator::before,.separator::after{content:'';flex:1;height:1px;background:rgba(80,144,208,.3)}
+.empty{text-align:center;padding:36px;color:var(--text-dimmer);font-size:12px;line-height:1.6}
+.s-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:5px}
+.s-input{width:100%;padding:11px 13px;background:rgba(0,0,0,.3);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Space Mono',monospace;font-size:12px;outline:none;transition:border-color .2s}
+.s-input:focus{border-color:var(--honey)}
+.s-input::placeholder{color:var(--text-dimmer)}
+.info-block{background:rgba(80,144,208,.06);border:1px solid rgba(80,144,208,.2);border-radius:12px;padding:14px;font-size:12px;color:var(--text-dim);line-height:1.7}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+  <div><div class="logo">🍯 Pasieka</div><div class="logo-sub">Dziennik głosowy</div></div>
+  <div class="season-badge" id="seasonBadge">sezon 2025</div>
+</header>
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('record')">🎙 Zapis</div>
+  <div class="tab" onclick="switchTab('dashboard')">📊 Pasieka</div>
+  <div class="tab" onclick="switchTab('history')">📋 Historia</div>
+  <div class="tab" onclick="switchTab('settings')">⚙ Ustawienia</div>
+</div>
+
+<!-- ZAPIS -->
+<div class="view active" id="view-record">
+  <div class="session-bar">
+    <div class="session-block">
+      <div class="session-label">📅 Data przeglądu</div>
+      <input class="session-date-input" type="date" id="sessionDate">
+      <button class="session-today-btn" onclick="setToday()">Dziś</button>
+    </div>
+    <div class="session-block">
+      <div class="session-label">🌤 Pogoda sesji</div>
+      <div class="weather-display" id="weatherDisplay" onclick="openWeatherModal()"><span id="weatherSummary">Dotknij aby ustawić</span></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="weatherModal" onclick="closeWeatherModal(event)">
+    <div class="modal-box">
+      <div class="modal-title">🌤 Pogoda – nagranie głosowe</div>
+      <div class="modal-hint">Powiedz np. <em>"słonecznie, dwadzieścia dwa stopnie, lekki wiatr"</em></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin:16px 0">
+        <button class="mic-btn" id="weatherMicBtn" onclick="toggleWeatherListening()" style="width:64px;height:64px;font-size:22px">🎙️</button>
+        <div class="mic-hint" id="weatherMicHint">Naciśnij i opisz pogodę</div>
+        <div class="transcript-box" id="weatherTranscriptBox" style="width:100%"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="document.getElementById('weatherModal').classList.remove('open')">Anuluj</button>
+        <button class="btn btn-primary" id="weatherSaveBtn" onclick="saveWeather()" disabled>Zapisz pogodę</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="voice-card">
+    <div class="mic-wrap">
+      <div class="mic-ring" id="micRing"></div>
+      <button class="mic-btn" id="micBtn" onclick="toggleListening()">🎙️</button>
+    </div>
+    <div class="mic-hint" id="micHint">Naciśnij i powiedz co widziałeś w ulu</div>
+    <div class="transcript-box" id="transcriptBox"></div>
+  </div>
+
+  <div class="parsed-card" id="parsedCard">
+    <div class="section-head">Rozpoznane dane</div>
+    <div class="field-grid" id="parsedBasic"></div>
+    <div id="parsedFramesIn" style="display:none"><div class="section-head">Dołożone ↓</div><div class="pill-row" id="pillsIn"></div></div>
+    <div id="parsedFramesOut" style="display:none"><div class="section-head">Zabrane ↑</div><div class="pill-row" id="pillsOut"></div></div>
+    <div id="parsedEvents" style="display:none"><div class="section-head">Zdarzenia</div><div class="pill-row" id="pillsEvents"></div></div>
+    <div class="alert-box" id="alertBox" style="display:none">⚠️ <span id="alertText"></span></div>
+    <div id="parsedNotes" style="display:none;font-size:12px;color:var(--text-dim);font-family:'Libre Baskerville',serif;font-style:italic;line-height:1.5"></div>
+  </div>
+
+  <div id="statusLine"></div>
+  <div class="btn-row" id="actionBtns" style="display:none">
+    <button class="btn btn-ghost" onclick="resetAll()">Anuluj</button>
+    <button class="btn btn-primary" id="saveBtn" onclick="saveRecord()">Zapisz</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="view" id="view-dashboard">
+  <div class="dash-legend">
+    <div class="legend-item"><div class="dot dot-green"></div> OK</div>
+    <div class="legend-item"><div class="dot dot-orange"></div> Uwaga</div>
+    <div class="legend-item"><div class="dot dot-red"></div> Pilne</div>
+    <div class="legend-item"><div class="dot dot-gray"></div> Brak danych</div>
+  </div>
+  <div class="hive-grid" id="hiveGrid"></div>
+  <div class="hive-detail" id="hiveDetail">
+    <div class="hive-detail-header">
+      <div class="hive-detail-title" id="detailTitle"></div>
+      <button class="close-btn" onclick="closeDetail()">✕</button>
+    </div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<!-- HISTORIA -->
+<div class="view" id="view-history">
+  <div class="filter-row" id="filterRow"></div>
+  <div class="history-list" id="historyList"></div>
+</div>
+
+<!-- USTAWIENIA -->
+<div class="view" id="view-settings">
+  <div><div class="s-label">Liczba uli w pasiece</div><input class="s-input" id="cfgHiveCount" type="number" min="1" max="100" value="40"></div>
+  <button class="btn btn-primary" onclick="saveSettings()">Zapisz ustawienia</button>
+  <div id="cfgStatus"></div>
+  <div class="info-block">
+    <strong style="color:var(--honey)">ℹ️ Jak działa aplikacja</strong><br><br>
+    Nagrania głosowe są analizowane przez AI.<br>
+    Dane zapisują się lokalnie na telefonie i w Google Sheets.<br><br>
+    Karty w arkuszu:<br>
+    📊 <strong style="color:var(--green)">🐝 Pasieka</strong> – podgląd wszystkich uli<br>
+    📋 <strong style="color:var(--green)">Ul 1, Ul 2...</strong> – historia każdego ula<br>
+    ⚠️ <strong style="color:var(--orange)">Alerty</strong> – pilne sprawy
+  </div>
+</div>
+</div>
+
+<script>
+// ── KONFIGURACJA ──────────────────────────────
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJU5DnihZw8_-48-VBgRAQYLEPJXFdKggDrFaRO4CHovFoVm4XTbQ6280-4GtSNpbbIg/exec';
+const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
+
+// ── STATE ─────────────────────────────────────
+let recognition, listening=false, currentTranscript='', parsedData=null;
+let records=JSON.parse(localStorage.getItem('pasiekaRec_v2')||'[]');
+let settings=JSON.parse(localStorage.getItem('pasiekaCfg_v2')||'{"hiveCount":40}');
+let filterHive=null, sessionWeather=null;
+let weatherListening=false, weatherTranscript='', weatherRecognition=null;
+
+window.onload=()=>{
+  document.getElementById('cfgHiveCount').value=settings.hiveCount||40;
+  document.getElementById('seasonBadge').textContent='sezon '+new Date().getFullYear();
+  setToday(); initSpeech(); initWeatherSpeech(); renderDashboard();
+};
+
+// ── DATA I POGODA SESJI ───────────────────────
+function setToday(){document.getElementById('sessionDate').value=new Date().toISOString().slice(0,10);}
+function getSessionDate(){return document.getElementById('sessionDate').value||new Date().toISOString().slice(0,10);}
+
+function openWeatherModal(){
+  document.getElementById('weatherModal').classList.add('open');
+  weatherTranscript='';
+  document.getElementById('weatherTranscriptBox').textContent='';
+  document.getElementById('weatherTranscriptBox').classList.remove('show');
+  document.getElementById('weatherSaveBtn').disabled=true;
+  document.getElementById('weatherMicBtn').textContent='🎙️';
+  document.getElementById('weatherMicBtn').classList.remove('listening');
+  document.getElementById('weatherMicHint').textContent='Naciśnij i opisz pogodę';
+}
+function closeWeatherModal(e){
+  if(e&&e.target!==document.getElementById('weatherModal'))return;
+  if(weatherListening&&weatherRecognition)weatherRecognition.stop();
+  document.getElementById('weatherModal').classList.remove('open');
+}
+function initWeatherSpeech(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR)return;
+  weatherRecognition=new SR(); weatherRecognition.lang='pl-PL'; weatherRecognition.interimResults=true;
+  weatherRecognition.onresult=e=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript;}
+    const box=document.getElementById('weatherTranscriptBox');
+    box.textContent=final||interim; box.classList.add('show');
+    if(final){weatherTranscript=final;document.getElementById('weatherSaveBtn').disabled=false;}
+  };
+  weatherRecognition.onend=()=>{
+    weatherListening=false;
+    document.getElementById('weatherMicBtn').classList.remove('listening');
+    document.getElementById('weatherMicBtn').textContent='🎙️';
+  };
+  weatherRecognition.onerror=()=>{weatherListening=false;};
+}
+function toggleWeatherListening(){
+  if(!weatherRecognition)return;
+  if(weatherListening){weatherRecognition.stop();return;}
+  weatherTranscript='';
+  document.getElementById('weatherTranscriptBox').textContent='';
+  document.getElementById('weatherTranscriptBox').classList.remove('show');
+  document.getElementById('weatherSaveBtn').disabled=true;
+  weatherRecognition.start(); weatherListening=true;
+  document.getElementById('weatherMicBtn').classList.add('listening');
+  document.getElementById('weatherMicBtn').textContent='⏹';
+  document.getElementById('weatherMicHint').textContent='Słucham...';
+}
+async function saveWeather(){
+  if(!weatherTranscript)return;
+  document.getElementById('weatherSaveBtn').disabled=true;
+  try{
+    const resp=await fetch(ANTHROPIC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:200,system:'Wyciągnij dane pogodowe i zwróć TYLKO JSON bez markdown: {"pogoda":string|null,"temperatura":number|null}',messages:[{role:'user',content:weatherTranscript}]})});
+    const data=await resp.json();
+    sessionWeather=JSON.parse(data.content?.map(b=>b.text||'').join('').trim());
+    sessionWeather.raw=weatherTranscript;
+  }catch(e){sessionWeather={pogoda:weatherTranscript,temperatura:null,raw:weatherTranscript};}
+  const parts=[sessionWeather.pogoda,sessionWeather.temperatura!=null?sessionWeather.temperatura+'°C':null].filter(Boolean);
+  document.getElementById('weatherSummary').textContent=parts.join(', ')||weatherTranscript;
+  document.getElementById('weatherDisplay').classList.add('set');
+  document.getElementById('weatherModal').classList.remove('open');
+}
+
+// ── MIKROFON GŁÓWNY ───────────────────────────
+function initSpeech(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){setStatus('Użyj Chrome – tylko ta przeglądarka obsługuje rozpoznawanie mowy.','err');document.getElementById('micBtn').disabled=true;return;}
+  recognition=new SR(); recognition.lang='pl-PL'; recognition.continuous=false; recognition.interimResults=true;
+  recognition.onresult=e=>{
+    let interim='',final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)final+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript;}
+    const box=document.getElementById('transcriptBox'); box.textContent=final||interim; box.classList.add('show');
+    if(final)currentTranscript=final;
+  };
+  recognition.onend=()=>{listening=false;updateMicUI();if(currentTranscript)analyzeWithAI(currentTranscript);};
+  recognition.onerror=e=>{listening=false;updateMicUI();if(e.error!=='aborted')setStatus('Błąd mikrofonu: '+e.error,'err');};
+}
+function toggleListening(){
+  if(!recognition)return;
+  if(listening){recognition.stop();return;}
+  currentTranscript='';
+  ['transcriptBox','parsedCard'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('actionBtns').style.display='none';
+  document.getElementById('statusLine').innerHTML='';
+  recognition.start(); listening=true; updateMicUI();
+}
+function updateMicUI(){
+  const btn=document.getElementById('micBtn'),ring=document.getElementById('micRing'),hint=document.getElementById('micHint');
+  if(listening){btn.classList.add('listening');btn.textContent='⏹';ring.classList.add('active');hint.textContent='Słucham... naciśnij aby zakończyć';}
+  else{btn.classList.remove('listening');btn.textContent='🎙️';ring.classList.remove('active');hint.textContent='Naciśnij i powiedz co widziałeś w ulu';}
+}
+
+// ── AI ANALIZA ────────────────────────────────
+async function analyzeWithAI(text){
+  setStatus('<span class="spinner"></span> Analizuję...','raw');
+  const SYSTEM='Jesteś asystentem pszczelarza. Analizujesz notatkę głosową z przeglądu ula i zwracasz TYLKO czysty JSON bez markdown.\n\nTypy ramek: węza, susz, jaja, czerw, matecznik, miód\nTypy korpusów: korpus, półkorpus\nZdarzenia: osypanie, łączenie rodzin, wymiana matki, nowa matka, karmienie, ciasto, rojenie, leczenie\n\nFormat:\n{"ul":number|null,"sila":1-5|null,"matka":"tak"|"nie"|"niewidoczna"|"trutówka"|null,"czerw":"tak"|"nie"|null,"ramkiDodane":[{"typ":"węza","ilosc":2}],"ramkiZabrane":[],"korpusyDodane":[],"korpusyZabrane":[],"zdarzenia":[],"pogoda":string|null,"temperatura":number|null,"uwagi":string|null,"alert":string|null}\n\nAlert gdy: brak matki, trutówka, osypanie, rojenie, choroba. Zwróć TYLKO JSON.';
+  try{
+    const resp=await fetch(ANTHROPIC_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:SYSTEM,messages:[{role:'user',content:text}]})});
+    const data=await resp.json();
+    parsedData=JSON.parse(data.content?.map(b=>b.text||'').join('').trim());
+    parsedData.transcript=text;
+    parsedData.savedAt=new Date().toISOString();
+    parsedData.data=getSessionDate();
+    if(sessionWeather){
+      if(!parsedData.pogoda)parsedData.pogoda=sessionWeather.pogoda;
+      if(parsedData.temperatura==null)parsedData.temperatura=sessionWeather.temperatura;
+    }
+    renderParsed(parsedData);
+  }catch(e){
+    setStatus('Nie udało się przetworzyć notatki. Sprawdź połączenie.','err');
+  }
+}
+
+function renderParsed(d){
+  const basics=[['Ul',d.ul?'#'+d.ul:'—',''],['Data',d.data||'—',''],['Siła',d.sila?'+'.repeat(d.sila):'—',d.sila>=4?'green':d.sila<=2?'red':''],['Matka',d.matka||'—',d.matka==='tak'?'green':(d.matka==='nie'||d.matka==='trutówka')?'red':''],['Czerw',d.czerw||'—',d.czerw==='tak'?'green':''],['Pogoda',[d.pogoda,d.temperatura!=null?d.temperatura+'°C':null].filter(Boolean).join(' ')||'—','']];
+  document.getElementById('parsedBasic').innerHTML=basics.map(([l,v,c])=>'<div class="field-box"><div class="field-label">'+l+'</div><div class="field-val '+c+'">'+v+'</div></div>').join('');
+  const frIn=[...(d.ramkiDodane||[]).map(r=>'+'+r.ilosc+' ramka z '+r.typ),...(d.korpusyDodane||[]).map(k=>'+'+k.ilosc+' '+k.typ)];
+  const frOut=[...(d.ramkiZabrane||[]).map(r=>'-'+r.ilosc+' ramka z '+r.typ),...(d.korpusyZabrane||[]).map(k=>'-'+k.ilosc+' '+k.typ)];
+  if(frIn.length){document.getElementById('parsedFramesIn').style.display='block';document.getElementById('pillsIn').innerHTML=frIn.map(t=>'<span class="pill">'+t+'</span>').join('');}
+  if(frOut.length){document.getElementById('parsedFramesOut').style.display='block';document.getElementById('pillsOut').innerHTML=frOut.map(t=>'<span class="pill removed">'+t+'</span>').join('');}
+  if((d.zdarzenia||[]).length){document.getElementById('parsedEvents').style.display='block';document.getElementById('pillsEvents').innerHTML=d.zdarzenia.map(z=>'<span class="pill '+(['osypanie'].includes(z)?'danger':'event')+'">'+z+'</span>').join('');}
+  if(d.alert){document.getElementById('alertText').textContent=d.alert;document.getElementById('alertBox').style.display='flex';}
+  if(d.uwagi){const el=document.getElementById('parsedNotes');el.textContent=d.uwagi;el.style.display='block';}
+  document.getElementById('parsedCard').classList.add('show');
+  document.getElementById('actionBtns').style.display='flex';
+  setStatus('','raw');
+}
+
+// ── ZAPIS ─────────────────────────────────────
+async function saveRecord(){
+  if(!parsedData)return;
+  records.unshift(parsedData);
+  localStorage.setItem('pasiekaRec_v2',JSON.stringify(records));
+  document.getElementById('saveBtn').disabled=true;
+  setStatus('<span class="spinner"></span> Zapisuję do Sheets...','raw');
+  try{
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(parsedData)});
+    setStatus('✓ Zapisano w Google Sheets!','ok');
+  }catch(e){
+    setStatus('Zapisano lokalnie – błąd połączenia z Sheets.','err');
+  }
+  setTimeout(resetAll,2000);
+}
+
+function resetAll(){
+  parsedData=null;currentTranscript='';
+  document.getElementById('transcriptBox').textContent='';
+  ['transcriptBox','parsedCard'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  ['parsedFramesIn','parsedFramesOut','parsedEvents','parsedNotes'].forEach(id=>{document.getElementById(id).style.display='none';});
+  document.getElementById('alertBox').style.display='none';
+  document.getElementById('actionBtns').style.display='none';
+  document.getElementById('saveBtn').disabled=false;
+  document.getElementById('statusLine').innerHTML='';
+}
+
+// ── DASHBOARD ─────────────────────────────────
+function renderDashboard(){
+  const count=parseInt(settings.hiveCount)||40;
+  const grid=document.getElementById('hiveGrid');
+  const latest={};
+  records.forEach(r=>{if(r.ul&&!latest[r.ul])latest[r.ul]=r;});
+  grid.innerHTML='';
+  for(let i=1;i<=count;i++){
+    const r=latest[i];
+    let cls='hive-empty',icon='';
+    if(r){
+      const hasCrit=r.alert&&(r.matka==='nie'||r.matka==='trutówka'||(r.zdarzenia||[]).includes('osypanie'));
+      const hasWarn=r.alert||r.matka==='niewidoczna'||(r.zdarzenia||[]).some(z=>['karmienie','ciasto','leczenie'].includes(z));
+      if(hasCrit){cls='hive-crit';icon='⚠';}else if(hasWarn){cls='hive-warn';icon='!';}else{cls='hive-ok';icon='✓';}
+    }
+    const cell=document.createElement('div');
+    cell.className='hive-cell '+cls;
+    cell.innerHTML='<div class="hive-num">'+i+'</div><div class="hive-icon">'+icon+'</div>';
+    cell.onclick=()=>showHiveDetail(i,r);
+    grid.appendChild(cell);
+  }
+}
+function showHiveDetail(num,r){
+  document.getElementById('detailTitle').textContent='Ul #'+num;
+  if(!r){document.getElementById('detailContent').innerHTML='<div style="font-size:12px;color:var(--text-dim)">Brak przeglądów.</div>';}
+  else{
+    const lines=[['Ostatni przegląd',r.data||r.savedAt?.slice(0,10)||'—'],['Siła',r.sila?'+'.repeat(r.sila):'—'],['Matka',r.matka||'—'],['Czerw',r.czerw||'—']].map(([k,v])=>'<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px"><span style="color:var(--text-dim)">'+k+'</span><span style="color:var(--honey)">'+v+'</span></div>').join('');
+    document.getElementById('detailContent').innerHTML=lines+(r.alert?'<div class="alert-box" style="margin-top:8px">⚠️ '+r.alert+'</div>':'')+(r.uwagi?'<div style="font-size:12px;color:var(--text-dim);margin-top:8px;font-style:italic">'+r.uwagi+'</div>':'');
+  }
+  document.getElementById('hiveDetail').classList.add('show');
+}
+function closeDetail(){document.getElementById('hiveDetail').classList.remove('show');}
+
+// ── HISTORIA ──────────────────────────────────
+function renderHistory(){
+  const hives=[...new Set(records.map(r=>r.ul).filter(Boolean))].sort((a,b)=>a-b);
+  document.getElementById('filterRow').innerHTML='<div class="chip active" onclick="setFilter(null,this)">Wszystkie</div>'+hives.map(n=>'<div class="chip" onclick="setFilter('+n+',this)">Ul '+n+'</div>').join('');
+  renderHistoryList();
+}
+function setFilter(hive,el){filterHive=hive;document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderHistoryList();}
+function renderHistoryList(){
+  const list=document.getElementById('historyList');
+  const filtered=filterHive?records.filter(r=>r.ul==filterHive):records;
+  if(!filtered.length){list.innerHTML='<div class="empty">Brak wpisów.<br>Zacznij od zakładki 🎙 Zapis.</div>';return;}
+  list.innerHTML=filtered.map((r,idx)=>{
+    const prevR=filtered[idx+1];let sep='';
+    if(filterHive&&prevR){
+      if((r.zdarzenia||[]).some(z=>z==='wymiana matki'||z==='nowa matka'))sep='<div class="separator">↑ Wymiana matki</div>';
+      if((r.zdarzenia||[]).includes('osypanie'))sep='<div class="separator">↑ Osypanie rodziny</div>';
+    }
+    const hasAlert=r.alert||r.matka==='nie'||r.matka==='trutówka';
+    const hasEvent=(r.zdarzenia||[]).length>0;
+    const frIn=[...(r.ramkiDodane||[]).map(f=>'+'+f.ilosc+'×'+f.typ),...(r.korpusyDodane||[]).map(k=>'+'+k.ilosc+'×'+k.typ)];
+    const frOut=[...(r.ramkiZabrane||[]).map(f=>'-'+f.ilosc+'×'+f.typ),...(r.korpusyZabrane||[]).map(k=>'-'+k.ilosc+'×'+k.typ)];
+    const pills=[...frIn.map(t=>'<span class="h-pill h-pill-green">'+t+'</span>'),...frOut.map(t=>'<span class="h-pill h-pill-orange">'+t+'</span>'),...(r.zdarzenia||[]).map(z=>'<span class="h-pill '+(['osypanie','trutówka'].includes(z)?'h-pill-red':'h-pill-blue')+'">'+z+'</span>')].join('');
+    return sep+'<div class="h-item '+(hasAlert?'has-alert':hasEvent?'has-event':'')+'"><div class="h-header"><div class="h-hive">Ul #'+(r.ul||'?')+'</div><div class="h-date">'+(r.data||r.savedAt?.slice(0,10)||'')+'</div></div><div class="h-strength">'+(r.sila?'+'.repeat(r.sila):'')+'</div>'+(pills?'<div class="h-pills">'+pills+'</div>':'')+(r.uwagi?'<div class="h-notes">'+r.uwagi+'</div>':'')+(r.alert?'<div class="h-alert">⚠️ '+r.alert+'</div>':'')+(r.pogoda?'<div class="h-weather">🌤 '+r.pogoda+(r.temperatura!=null?' · '+r.temperatura+'°C':'')+'</div>':'')+'</div>';
+  }).join('');
+}
+
+// ── USTAWIENIA ────────────────────────────────
+function saveSettings(){
+  settings.hiveCount=parseInt(document.getElementById('cfgHiveCount').value)||40;
+  localStorage.setItem('pasiekaCfg_v2',JSON.stringify(settings));
+  document.getElementById('cfgStatus').innerHTML='<div class="status-msg s-ok">✓ Zapisano</div>';
+  setTimeout(()=>document.getElementById('cfgStatus').innerHTML='',2000);
+  renderDashboard();
+}
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['record','dashboard','history','settings'][i]===name));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-'+name));
+  if(name==='dashboard')renderDashboard();
+  if(name==='history')renderHistory();
+}
+function setStatus(msg,type){
+  const el=document.getElementById('statusLine');
+  if(type==='raw'){el.innerHTML=msg;return;}
+  el.innerHTML=msg?'<div class="status-msg s-'+type+'">'+msg+'</div>':'';
+}
+</script>
+</body>
+</html>
